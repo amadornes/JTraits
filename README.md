@@ -10,3 +10,8 @@ Traits are a fundamental part of the Scala language which allow you to add metho
  * Method and variable supercalls: You can call methods in a trait's mixed-in parent and access its variables.
  * Constructor forwarding: Constructors will be built matching the ones inside the trait. A call will be made to the parent constructor with the passed arguments and then the trait's constructor will be ran.
  * Easy stack tracking: Mixins will forward the original line numbers from the trait along with a reference to it, allowing IDEs to track the source of the mixin down easily when the stack gets dumped (for example, when a crash gets printed to the console), allowing you to easily find that code.
+
+## How do I use JTraits?
+JTraits is a very easy to use library which includes two main classes: JTrait<T> and MixinFactory.
+To make a trait you need to make a class that extends JTrait<T> and use whatever class or interface you intend on applying it to as the generic argument.
+To make a mixin, just call MixinFactory.mixin(Class<?> clazz, JTrait<?>... traits) with your base class and the trait(s) you want to apply to it and it will mix them for you. The result will be a new class which you can instantiate and use for anything you want.
