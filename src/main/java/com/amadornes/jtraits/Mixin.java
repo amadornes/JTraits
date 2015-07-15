@@ -2,7 +2,6 @@ package com.amadornes.jtraits;
 
 import static org.objectweb.asm.Opcodes.*;
 
-import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -74,14 +73,6 @@ public class Mixin<T> {
         bridgeMethods(writer);
 
         byte[] bytecode = writer.toByteArray();
-
-        try {
-            FileOutputStream fos = new FileOutputStream("Test.class");
-            fos.write(bytecode);
-            fos.close();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
 
         return result = (Class<T>) CustomClassLoader.instance.addMixin(newType.replace('/', '.'), bytecode, this);
     }
