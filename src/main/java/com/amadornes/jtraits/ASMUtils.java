@@ -142,7 +142,7 @@ public class ASMUtils {
 
         try {
             ClassNode cnode = new ClassNode();
-            ClassReader reader = new ClassReader(CustomClassLoader.instance.getResourceAsStream(clazz.getName().replace(".", "/") + ".class"));
+            ClassReader reader = new ClassReader(ClassLoadingHelper.instance.getResourceAsStream(clazz.getName().replace(".", "/") + ".class"));
             reader.accept(cnode, 0);
 
             return cnode;
@@ -185,7 +185,7 @@ public class ASMUtils {
         if (mixin.getTraitNode().interfaces != null)
             for (String s : mixin.getTraitNode().interfaces)
                 set.add(s);
-        Mixin<?> next = CustomClassLoader.instance.findMixin(mixin.getParentType().replace("/", "."));
+        Mixin<?> next = ClassLoadingHelper.instance.findMixin(mixin.getParentType().replace("/", "."));
         if (next != null)
             recursivelyFindClasses(next, set);
     }

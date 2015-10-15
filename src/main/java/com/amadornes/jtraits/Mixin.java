@@ -72,9 +72,7 @@ public class Mixin<T> {
 
         bridgeMethods(writer);
 
-        byte[] bytecode = writer.toByteArray();
-
-        return result = (Class<T>) CustomClassLoader.instance.addMixin(newType.replace('/', '.'), bytecode, this);
+        return result = (Class<T>) ClassLoadingHelper.instance.addMixin(newType.replace('/', '.'), writer.toByteArray(), this);
     }
 
     private void transferParentFields(ClassWriter writer) {
@@ -85,10 +83,32 @@ public class Mixin<T> {
             FieldVisitor v = writer.visitField(ACC_PUBLIC, f.name, f.desc, null, f.value);
             if (f.visibleAnnotations != null) {
                 for (AnnotationNode a : f.visibleAnnotations) {
+                    if (a.values == null)
+                        continue;
                     AnnotationVisitor av = v.visitAnnotation(a.desc, true);
                     Iterator<Object> it = a.values.iterator();
-                    while (it.hasNext())
-                        av.visit((String) it.next(), it.next());
+                    while (it.hasNext()) {
+                        String key = (String) it.next();
+                        Object val = it.next();
+                        try {
+                            if (val instanceof Object[]
+                                    && !(val instanceof byte[] || val instanceof boolean[] || val instanceof short[]
+                                            || val instanceof char[] || val instanceof int[] || val instanceof long[]
+                                            || val instanceof float[] || val instanceof double[])) {
+                                av = av.visitArray(key);
+                                int i = 0;
+                                for (Object o : (Object[]) val) {
+                                    av.visit("" + i, o);
+                                    i++;
+                                }
+                            } else {
+                                av.visit(key, val);
+                            }
+                        } catch (Exception ex) {
+                            if (MixinFactory.debug)
+                                new RuntimeException("Invalid key/value: " + key + " - " + val, ex).printStackTrace();
+                        }
+                    }
                 }
             }
             v.visitEnd();
@@ -176,7 +196,6 @@ public class Mixin<T> {
                         av.visit((String) it.next(), it.next());
                 }
             }
-
             v.visitEnd();
         }
     }
