@@ -2,6 +2,7 @@ package com.amadornes.jtraits;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,7 +48,8 @@ public class ASMUtils {
         return opcodes.get(opcode);
     }
 
-    public static int addInstructionsWithSuperRedirections(AbstractInsnNode node, List<AbstractInsnNode> added, boolean supercall, Mixin<?> mixin) {
+    public static int addInstructionsWithSuperRedirections(AbstractInsnNode node, List<AbstractInsnNode> added, boolean supercall,
+            Mixin<?> mixin) {
 
         if (node instanceof FieldInsnNode) {
             FieldInsnNode f = (FieldInsnNode) node;
@@ -64,8 +66,8 @@ public class ASMUtils {
         } else if (node instanceof MethodInsnNode) {
             MethodInsnNode m = (MethodInsnNode) node;
             if (supercall && !(m.name.equals("<init>") || m.name.equals("<clinit>")) && matches(m.owner, mixin.getParents())) {
-                added.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, trackClosestImplementation(m.name, m.desc, mixin.getParentClass()), m.name,
-                        m.desc, false));
+                added.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, trackClosestImplementation(m.name, m.desc, mixin.getParentClass()),
+                        m.name, m.desc, false));
                 return 2;
             }
             if (matches(m.owner, mixin.getParents())) {
@@ -142,7 +144,8 @@ public class ASMUtils {
 
         try {
             ClassNode cnode = new ClassNode();
-            ClassReader reader = new ClassReader(ClassLoadingHelper.instance.getResourceAsStream(clazz.getName().replace(".", "/") + ".class"));
+            ClassReader reader = new ClassReader(ClassLoadingHelper.instance.getResourceAsStream(clazz.getName().replace(".", "/")
+                    + ".class"));
             reader.accept(cnode, 0);
 
             return cnode;
@@ -178,16 +181,29 @@ public class ASMUtils {
     private static void recursivelyFindClasses(Mixin<?> mixin, Set<String> set) {
 
         set.add(mixin.getParentType());
-        if (mixin.getParentNode().interfaces != null)
-            for (String s : mixin.getParentNode().interfaces)
-                set.add(s);
         set.add(mixin.getTraitType());
-        if (mixin.getTraitNode().interfaces != null)
-            for (String s : mixin.getTraitNode().interfaces)
-                set.add(s);
+        recursivelyFindClasses(set);
         Mixin<?> next = ClassLoadingHelper.instance.findMixin(mixin.getParentType().replace("/", "."));
         if (next != null)
             recursivelyFindClasses(next, set);
+    }
+
+    private static void recursivelyFindClasses(Set<String> set) {
+
+        int oldAmt = set.size();
+        for (String s : new ArrayList<String>(set)) {
+            try {
+                Class<?> c = Class.forName(s.replace('/', '.'));
+                Class<?> sc = c.getSuperclass();
+                if (sc != null)
+                    set.add(sc.getName().replace('.', '/'));
+                for (Class<?> i : c.getInterfaces())
+                    set.add(i.getName().replace('.', '/'));
+            } catch (Exception ex) {
+            }
+        }
+        if (oldAmt != set.size())
+            recursivelyFindClasses(set);
     }
 
     public static MethodNode getMethod(String name, String desc, ClassNode clazz) {
