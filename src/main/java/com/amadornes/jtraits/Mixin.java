@@ -135,6 +135,7 @@ public class Mixin<T> {
 
     private void bridgeMethods(ClassWriter writer) {
 
+        List<String> constructors = new ArrayList<String>();
         for (MethodNode m : traitNode.methods) {
             MethodVisitor v = writer.visitMethod(ACC_PUBLIC | ACC_SYNTHETIC, m.name, m.desc, null, null);
             v.visitCode();
@@ -144,10 +145,15 @@ public class Mixin<T> {
 
             // Transfer parent node
             if (m.name.equals("<init>") || m.name.equals("<clinit>")) {
+                if (m.name.equals("<init>"))
+                    constructors.add(m.name + m.desc);
+
                 v.visitVarInsn(ALOAD, 0);
                 int index = 1;
                 for (Type t : Type.getArgumentTypes(m.desc)) {
-                    v.visitVarInsn(ALOAD, index);
+                    v.visitVarInsn(t == Type.BOOLEAN_TYPE || t == Type.BYTE_TYPE || t == Type.CHAR_TYPE || t == Type.INT_TYPE
+                            || t == Type.LONG_TYPE || t == Type.SHORT_TYPE ? ILOAD : (t == Type.DOUBLE_TYPE ? DLOAD
+                            : (t == Type.FLOAT_TYPE ? FLOAD : ALOAD)), index);
                     index += t.getSize();
                 }
                 v.visitMethodInsn(INVOKESPECIAL, parentType, m.name, m.desc, false);
@@ -197,6 +203,26 @@ public class Mixin<T> {
                 }
             }
             v.visitEnd();
+        }
+        for (MethodNode m : parentNode.methods) {
+            if (m.name.equals("<init>") && !constructors.contains(m.name + m.desc)) {
+                MethodVisitor v = writer.visitMethod(ACC_PUBLIC | ACC_SYNTHETIC, m.name, m.desc, null, null);
+                v.visitCode();
+
+                v.visitVarInsn(ALOAD, 0);
+                int index = 1;
+                for (Type t : Type.getArgumentTypes(m.desc)) {
+                    v.visitVarInsn(t == Type.BOOLEAN_TYPE || t == Type.BYTE_TYPE || t == Type.CHAR_TYPE || t == Type.INT_TYPE
+                            || t == Type.SHORT_TYPE ? ILOAD : (t == Type.LONG_TYPE ? LLOAD : (t == Type.DOUBLE_TYPE ? DLOAD
+                            : (t == Type.FLOAT_TYPE ? FLOAD : ALOAD))), index);
+                    index += t.getSize();
+                }
+                v.visitMethodInsn(INVOKESPECIAL, parentType, m.name, m.desc, false);
+                v.visitInsn(RETURN);
+
+                v.visitMaxs(m.maxStack + 1, m.maxLocals + 1);
+                v.visitEnd();
+            }
         }
     }
 
