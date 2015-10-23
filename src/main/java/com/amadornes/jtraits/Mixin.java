@@ -81,6 +81,16 @@ public class Mixin<T> {
 
         bridgeMethods(writer);
 
+        boolean hasSelfObject = false;
+        for (FieldNode f : parentNode.fields) {
+            if (f.name.equals("_self")) {
+                hasSelfObject = true;
+                break;
+            }
+        }
+        if (!hasSelfObject)
+            writer.visitField(ACC_PUBLIC | ACC_SYNTHETIC, "_self", "Ljava/lang/Object;", null, null);
+
         return writer.toByteArray();
     }
 
@@ -175,13 +185,17 @@ public class Mixin<T> {
                     index += t.getSize();
                 }
                 v.visitMethodInsn(INVOKESPECIAL, parentType, m.name, m.desc, false);
+
+                v.visitVarInsn(ALOAD, 0);
+                v.visitVarInsn(ALOAD, 0);
+                v.visitFieldInsn(PUTFIELD, newType, "_self", "Ljava/lang/Object;");
             }
 
             // Get matching method and transfer it if needed
             InsnList list = new InsnList();
             ListIterator<AbstractInsnNode> originalInsns = m.instructions.iterator();
             List<AbstractInsnNode> added = new ArrayList<AbstractInsnNode>();
-            boolean supercall = false;
+            int supercall = 0;
             while (originalInsns.hasNext()) {
                 AbstractInsnNode node = originalInsns.next();
                 AbstractInsnNode next = node.getNext(), prev = node.getPrevious();
@@ -194,9 +208,11 @@ public class Mixin<T> {
 
                 int result = ASMUtils.addInstructionsWithSuperRedirections(node, added, supercall, this);
                 if (result == 1)
-                    supercall = true;
+                    supercall = 1;
                 else if (result == 2)
-                    supercall = false;
+                    supercall = 2;
+                else if (result == 3)
+                    supercall = 3;
 
                 if (added.isEmpty()) {
                     ASMUtils.copyInsn(list, node);
@@ -236,6 +252,11 @@ public class Mixin<T> {
                     index += t.getSize();
                 }
                 v.visitMethodInsn(INVOKESPECIAL, parentType, m.name, m.desc, false);
+
+                v.visitVarInsn(ALOAD, 0);
+                v.visitVarInsn(ALOAD, 0);
+                v.visitFieldInsn(PUTFIELD, newType, "_self", "Ljava/lang/Object;");
+
                 v.visitInsn(RETURN);
 
                 v.visitMaxs(m.maxStack + 1, m.maxLocals + 1);

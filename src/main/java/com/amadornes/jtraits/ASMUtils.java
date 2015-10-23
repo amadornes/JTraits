@@ -48,7 +48,7 @@ public class ASMUtils {
         return opcodes.get(opcode);
     }
 
-    public static int addInstructionsWithSuperRedirections(AbstractInsnNode node, List<AbstractInsnNode> added, boolean supercall,
+    public static int addInstructionsWithSuperRedirections(AbstractInsnNode node, List<AbstractInsnNode> added, int supercall,
             Mixin<?> mixin) {
 
         if (node instanceof FieldInsnNode) {
@@ -59,15 +59,20 @@ public class ASMUtils {
                     return 1;
                 } else {
                     added.add(new FieldInsnNode(f.getOpcode(), mixin.getNewType(), f.name, f.desc));
+                    if (f.name.equals("_self"))
+                        return 3;
                 }
             } else {
                 added.add(new FieldInsnNode(f.getOpcode(), f.owner, f.name, f.desc));
             }
         } else if (node instanceof MethodInsnNode) {
             MethodInsnNode m = (MethodInsnNode) node;
-            if (supercall && !(m.name.equals("<init>") || m.name.equals("<clinit>")) && matches(m.owner, mixin.getParents())) {
+            if (supercall == 1 && !(m.name.equals("<init>") || m.name.equals("<clinit>")) && matches(m.owner, mixin.getParents())) {
                 added.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, trackClosestImplementation(m.name, m.desc, mixin.getParentClass()),
                         m.name, m.desc, false));
+                return 2;
+            } else if (supercall == 3 && !(m.name.equals("<init>") || m.name.equals("<clinit>")) && matches(m.owner, mixin.getParents())) {
+                added.add(new MethodInsnNode(m.itf ? Opcodes.INVOKEINTERFACE : Opcodes.INVOKESPECIAL, m.owner, m.name, m.desc, m.itf));
                 return 2;
             }
             if (matches(m.owner, mixin.getParents())) {
