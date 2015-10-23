@@ -155,6 +155,14 @@ public class ASMUtils {
         }
     }
 
+    public static ClassNode getClassNode(byte[] bytecode) {
+
+        ClassNode cnode = new ClassNode();
+        ClassReader reader = new ClassReader(bytecode);
+        reader.accept(cnode, 0);
+        return cnode;
+    }
+
     public static int getReturnCode(String type) {
 
         if (type.equals("V"))

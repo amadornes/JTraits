@@ -35,6 +35,7 @@ public class Mixin<T> {
 
     private String traitType;
     private ClassNode traitNode;
+    private Class<?> traitClass;
 
     private String newType;
     private String castType;
@@ -45,11 +46,11 @@ public class Mixin<T> {
     public Mixin(Class<T> clazz, Class<?> trait) {
 
         parentType = Type.getInternalName(clazz);
-        parentNode = ASMUtils.getClassNode(clazz);
         parentClass = clazz;
-
         traitType = Type.getInternalName(trait);
-        traitNode = ASMUtils.getClassNode(trait);
+        traitClass = trait;
+
+        updateNodes();
 
         newType = getName(clazz, trait);
         castType = newType;
@@ -57,11 +58,19 @@ public class Mixin<T> {
         parents = ASMUtils.recursivelyFindClasses(this);
     }
 
-    @SuppressWarnings("unchecked")
-    public Class<T> mixin() {
+    public void updateNodes() {
 
-        if (result != null)
-            return result;
+        parentNode = ASMUtils.getClassNode(parentClass);
+        traitNode = ASMUtils.getClassNode(traitClass);
+    }
+
+    public void updateNodes(byte[] traitBytes) {
+
+        parentNode = ASMUtils.getClassNode(parentClass);
+        traitNode = ASMUtils.getClassNode(traitClass);
+    }
+
+    public byte[] mixin_do() {
 
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
         writer.visit(V1_6, ACC_PUBLIC, newType, null, parentType, traitNode.interfaces.toArray(new String[traitNode.interfaces.size()]));
@@ -72,7 +81,16 @@ public class Mixin<T> {
 
         bridgeMethods(writer);
 
-        return result = (Class<T>) ClassLoadingHelper.instance.addMixin(newType.replace('/', '.'), writer.toByteArray(), this);
+        return writer.toByteArray();
+    }
+
+    @SuppressWarnings("unchecked")
+    public Class<T> mixin() {
+
+        if (result != null)
+            return result;
+
+        return result = (Class<T>) ClassLoadingHelper.instance.addMixin(newType.replace('/', '.'), mixin_do(), this);
     }
 
     private void transferParentFields(ClassWriter writer) {

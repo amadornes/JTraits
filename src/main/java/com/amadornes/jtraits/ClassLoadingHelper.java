@@ -58,4 +58,9 @@ public class ClassLoadingHelper {
         return this.getClass().getClassLoader().getResourceAsStream(name);
     }
 
+    public Map<String, Mixin<?>> getDefinedMixins() {
+
+        return mixins;
+    }
+
 }
