@@ -15,3 +15,8 @@ Traits are a fundamental part of the Scala language which allow you to add metho
 JTraits is a very easy to use library which includes two main classes: JTrait<T> and MixinFactory.
 To make a trait you need to make a class that extends JTrait<T> and use whatever class or interface you intend on applying it to as the generic argument.
 To make a mixin, just call MixinFactory.mixin(Class<?> clazz, JTrait<?>... traits) with your base class and the trait(s) you want to apply to it and it will mix them for you. The result will be a new class which you can instantiate and use for anything you want.
+
+## HotSwapping
+The way that JTraits works makes it impossible for hot-swapping to work natively, but luckily there's now a Java Agent which you can add to your run configuration that will reload any mixins using a trait, when said trait is re-defined (hot-swapped).
+You can download it here: http://amadornes.com/jtraits-agent.jar
+For it to be loaded, you need to add this to your VM arguments: -javaagent:path-to-the.jar
