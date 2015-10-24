@@ -22,6 +22,8 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
+import com.amadornes.jtraits.Annotation.CheckMixin;
+
 public class Mixin<T> {
 
     public static final String getName(Class<?> clazz, Class<?> trait) {
@@ -43,6 +45,10 @@ public class Mixin<T> {
 
     private String[] parents;
 
+    private boolean annCheckMixin;
+    private String annCheckMixinField;
+    private String annCheckMixinOwner;
+
     public Mixin(Class<T> clazz, Class<?> trait) {
 
         parentType = Type.getInternalName(clazz);
@@ -56,6 +62,18 @@ public class Mixin<T> {
         castType = newType;
 
         parents = ASMUtils.recursivelyFindClasses(this);
+
+        Class<?> c = clazz;
+        do {
+            CheckMixin a = c.getAnnotation(CheckMixin.class);
+            if (a == null)
+                continue;
+
+            annCheckMixin = true;
+            annCheckMixinField = a.value();
+            annCheckMixinOwner = c.getName().replace('.', '/');
+            break;
+        } while ((c = c.getSuperclass()) != null && c != Object.class);
     }
 
     public void updateNodes() {
@@ -189,6 +207,12 @@ public class Mixin<T> {
                 v.visitVarInsn(ALOAD, 0);
                 v.visitVarInsn(ALOAD, 0);
                 v.visitFieldInsn(PUTFIELD, newType, "_self", "Ljava/lang/Object;");
+
+                if (annCheckMixin) {
+                    v.visitVarInsn(ALOAD, 0);
+                    v.visitLdcInsn(1);
+                    v.visitFieldInsn(PUTFIELD, annCheckMixinOwner, annCheckMixinField, "Z");
+                }
             }
 
             // Get matching method and transfer it if needed
@@ -256,6 +280,12 @@ public class Mixin<T> {
                 v.visitVarInsn(ALOAD, 0);
                 v.visitVarInsn(ALOAD, 0);
                 v.visitFieldInsn(PUTFIELD, newType, "_self", "Ljava/lang/Object;");
+
+                if (annCheckMixin) {
+                    v.visitVarInsn(ALOAD, 0);
+                    v.visitLdcInsn(1);
+                    v.visitFieldInsn(PUTFIELD, annCheckMixinOwner, annCheckMixinField, "Z");
+                }
 
                 v.visitInsn(RETURN);
 
